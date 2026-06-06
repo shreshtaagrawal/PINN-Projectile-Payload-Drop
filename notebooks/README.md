@@ -56,7 +56,7 @@ what's *new*.
   best on `O(1)` numbers), and *every loss term is divided by its natural physical scale*
   (`u`, `g`, a curvature scale…). This makes each term order 1, so the loss **weights express
   priorities** instead of secretly being unit conversions.
-- **Adam optimiser + a decaying learning rate** (StepLR or CosineAnnealing): big steps early to
+- **Adam optimiser + a decaying learning rate**: big steps early to
   explore, tiny steps late to settle into the minimum.
 - **Collocation points:** random input locations where the physics residual is enforced, so the
   law holds across the *whole* domain, resampled every epoch ("on-the-fly") so the net can't
