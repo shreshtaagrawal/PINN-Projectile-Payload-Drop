@@ -79,25 +79,6 @@ PINN-Projectile-Payload-Drop/
 
 All five notebooks are complete and runnable.
 
-### 3.1 How to run / view the notebooks
-
-**GitHub displays notebooks but does not run them** — it renders the code, text, and any saved
-outputs (plots) as a read-only page. Workflow:
-
-1. Run everything in **Google Colab** (`Runtime → Run all`).
-2. **`File → Download → Download .ipynb`** — this bakes the plots into the file.
-3. Commit that file. A reviewer then sees all results without running anything.
-
-To make a notebook one-click runnable, add an *Open in Colab* badge to the top cell (replace
-`USER/REPO`):
-
-```markdown
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/USER/REPO/blob/main/notebooks/01_Ideal_Projectile_FIXED_u_theta_PINN.ipynb)
-```
-
-Notes for a **private** repo: the Colab badge works only for accounts granted access; **Binder
-won't work** (needs a public repo); use **GitHub Codespaces** to actually execute inside GitHub.
-
 ---
 
 ## 4. The physics ladder
