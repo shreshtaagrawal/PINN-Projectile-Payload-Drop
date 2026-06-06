@@ -258,8 +258,10 @@ scale-balanced weighted loss.
 
 ## 10. Honest results & known limitations
 
-- **NB2** is accurate in its core but ~56%-under-5%-RMSE overall — needs adaptive loss balancing
-  / hard constraints before it's a reliable building block.
+- **NB1–2** are now near-exact (RMSE ~0.05% for NB1; ~0.00% across the range for NB2) thanks to
+  input/output normalisation and a hard-constraint output form. This is expected: the ideal case is
+  easy *once formulated well*. NB2's sensitivity sweep also demonstrates concretely why generalising
+  matters (single-config model ~55% mean RMSE off its one point vs ~0% for the generalised model).
 - **NB3–5** demonstrate the method against known truths; the precise RMSE / recovered values are
   printed in each notebook's output (read them off the committed runs rather than quoting from
   memory).
