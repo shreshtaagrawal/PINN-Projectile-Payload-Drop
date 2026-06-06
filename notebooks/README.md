@@ -2,7 +2,7 @@
 
 A **Physics-Informed Neural Network (PINN)** framework for projectile / payload-drop
 trajectory modelling and **inverse parameter estimation** — recovering launch velocity,
-release angle, and aerodynamic drag from data, building toward targeting under real-world
+release angle from data, building toward targeting under real-world
 effects (drag, crosswind, vibration, turbulence).
 
 This README is written as a **learning document**. I know ML in theory but am new to coding
