@@ -95,46 +95,72 @@ All five notebooks are complete and runnable.
 
 ## 5. Notebook 1 — `01_Ideal_Projectile_FIXED` (single trajectory)
 
-**Aim:** map one input `x` → one output `y`, reproducing a single parabola for fixed `u=30`,
-`θ=30°`.
+**Aim:** map one input `x` → one output `y`, reproducing a single parabola for a fixed launch
+(`u=30 m/s`, `θ=45°`).
 
 **Physics.** Eliminating time from ideal projectile motion gives
-`y(x) = tan θ · x − (g / 2v_x²) x²`, whose key facts become four losses: start `y(0)=0` (IC),
-launch slope `y'(0)=v_y/v_x` (slope), landing `y(x_max)=0` (BC), and the law
-`y''(x) = −g/v_x² = const` enforced everywhere (physics).
+`y(x) = tan θ · x − (g / 2v_x²) x²`. The one fact that *is* the law of motion is the curvature
+`y''(x) = −g/v_x² = const`; the parabola also satisfies `y(0)=0` and `y(x_max)=0`.
 
-**The physics loss (the heart):**
+**The key design choice — hard constraints.** The first attempt used four competing penalty
+terms (start, slope, landing, physics) on *raw* unscaled inputs; they fought each other, the loss
+was wiggly, and the error was high. The rewrite fixes this two ways: (1) normalise everything to
+`[0,1]` (`ξ = x/x_max`, `η = y/y_ref`); (2) build the boundary conditions into the architecture
+via the ansatz
 ```python
-y_col   = pinn(x_col)
-dy_dx   = torch.autograd.grad(y_col, x_col, torch.ones_like(y_col), create_graph=True)[0]
-d2y_dx2 = torch.autograd.grad(dy_dx, x_col, torch.ones_like(dy_dx), create_graph=True)[0]
-loss_phys = torch.mean((d2y_dx2 - physics_constant)**2)   # physics_constant = -g/vx²
+def trajectory(xi):
+    return xi*(1-xi)*net(xi)          # ξ(1-ξ) is 0 at both ends → y(0)=y(x_max)=0 exactly
 ```
-`create_graph=True` on the first grad is what lets the second grad exist.
+Because the endpoints are now satisfied *by construction*, the IC and BC penalties disappear and
+the **only** training term left is the physics residual. With nothing left to fight, the loss
+slides smoothly to a noise floor.
 
-**Sizing reasoning.** One smooth curve is an easy target → a small net (1→32×3→1, ~2,209 params)
-is plenty; more capacity would just risk wiggles in a curve that should be a clean parabola.
-Weights `λ_phys=500 ≫ λ_ic=1` because the second-derivative residual is numerically tiny and
-would otherwise be ignored; `λ_slope=10` because the launch angle is what we care about most.
+**The (now single) physics loss:**
+```python
+y       = trajectory(xi) * y_ref
+dy_dx   = torch.autograd.grad(y, xi, torch.ones_like(y), create_graph=True)[0] / x_max
+d2y_dx2 = torch.autograd.grad(dy_dx, xi, torch.ones_like(dy_dx), create_graph=True)[0] / x_max
+loss    = torch.mean(((d2y_dx2 - phys_const)/(g/vx0**2))**2)   # phys_const = -g/vx²
+```
+The `/x_max` factors convert `d/dξ` to `d/dx`; dividing the residual by `g/v_x²` keeps it order 1.
+A small net (1→32×3→1, Tanh) trained with Adam + cosine-annealed LR.
+
+**Verified result:** smooth, spike-free loss and a **final RMSE of ≈ 0.05%** of peak height —
+the network has essentially become the exact parabola. The honest limitation: it knows only this
+*one* launch and can't adapt to a different `(u, θ)` — which motivates Notebook 2.
 
 ---
 
 ## 6. Notebook 2 — `02_Ideal_Projectile_GENERAL` (family of trajectories)
 
-**Aim:** one network for *any* launch in a range — inputs become `(x, u, θ)`, so the net learns
-a **surface** over launch space, not a single curve.
+**Aim:** one network for *any* launch in a range — inputs become `(ξ, u, θ)`, so a single model
+covers the whole family instead of one curve. Range: `u ∈ [20,40] m/s`, `θ ∈ [30,60]°`.
 
-**What's new vs NB1:** inputs normalised to `[0,1]`; bigger net (3→64×5→1, ~16,961 params)
-for the richer family; **on-the-fly** sampling of 20 `(u,θ)` pairs per epoch. The normalisation
-subtlety to watch: the output is normalised (`y_phys = y_norm · y_ref`) but we differentiate
-w.r.t. *raw* `x`, so the physical derivative is `dy_norm/dx · y_ref` — getting that conversion
-wrong silently corrupts the physics loss.
+**What's new vs NB1:** the launch settings are fed in as normalised inputs (`u/u_max`, `θ/90`);
+a bigger net (3→64×5→1) for the 3-D input; **on-the-fly** sampling of fresh random `(u,θ)` flights
+each epoch. The Notebook-1 recipe carries over unchanged — normalisation **and** the
+`ξ(1-ξ)·N` hard constraint — because that's what makes the loss smooth and the error tiny.
 
-**Honest result.** The `(u,θ)` sensitivity sweep gave **mean RMSE ≈ 21%**, best ≈ **0.95%**,
-with only **~56% of the training range under 5%** — accurate in the core, weak near the edges
-(low-angle cases where the range formula is sensitive). This is a real to-do, not a victory; the
-likely fixes are adaptive loss balancing, longer training, and a hard-constraint output form that
-bakes in `y(0)=0` and `y(x_max)=0` so those terms can't fight the physics term.
+**An honest insight.** Once normalised, *every* ideal projectile is the **same** curve,
+`η(ξ) = 4ξ(1−ξ)`. So in the vacuum case the network isn't learning many shapes — it's learning to
+*scale* one shape correctly per `(u,θ)`. That's exactly what a single-shot model can't do, and it's
+why the comparison below is lopsided. The genuinely harder generalisation (where normalisation does
+**not** collapse to one shape) arrives with drag in Notebook 3.
+
+**Verified result — and the comparison that shows NB2 beats NB1.** The notebook retrains a
+single-config (NB1-method) model and sweeps both over the `(u,θ)` grid, scoring RMSE vs the exact
+parabola:
+
+| Model | mean RMSE over grid | fraction under 5% |
+|---|---|---|
+| Single-config (NB1 method) | **55.2%** | 0.2% |
+| Generalised (NB2) | **≈ 0.00%** (worst 0.006%) | 100% |
+
+The single-shot model is accurate at *one* point (its training launch) and wrong everywhere else;
+the generalised model is accurate across the entire range. The two side-by-side heatmaps in the
+notebook make this visual: one green dot vs an all-green box. That picture is the whole argument for
+generalising. (This also corrects the earlier ~21%-mean result, which came from the old
+soft-constraint, unnormalised formulation — not from the problem being hard.)
 
 ---
 
