@@ -1,11 +1,11 @@
 # PINN-Projectile-Payload-Drop
 
 A **Physics-Informed Neural Network (PINN)** framework for projectile / payload-drop
-trajectory modelling and **inverse parameter estimation** — recovering launch velocity,
+trajectory modelling and inverse parameter estimation recovering launch velocity,
 release angle from data, building toward targeting under real-world
 effects (drag, crosswind, vibration, turbulence).
 
-This README is written as a **learning document**. I know ML in theory but am new to coding
+This README is written as a learning document. I know ML in theory but am new to coding
 from scratch, so every notebook is documented with four things: the **ideology** (why this
 choice), the **physics** (the law being enforced), the **math** (how that law becomes a loss),
 and the **code reasoning** (what the key lines do).
@@ -14,29 +14,27 @@ The project tells one story in two directions:
 
 > **Forward** (physics → trajectory): Notebooks 1 → 2 → 3.
 > **Inverse** (data → physics): Notebooks 4 → 5.
-> A PINN can act both as a *simulator* and as an *instrument that measures the world*.
-
 ---
 
 ## 0. One-paragraph mental model
 
 A normal network learns by copying labelled examples. A **PINN** learns by being told the
-**differential equation** its answer must obey, and is penalised whenever it breaks that law —
+**differential equation** its answer must obey, and is penalised whenever it breaks that law, 
 so it needs little or no labelled data. The same network, run "backwards," can also treat an
 unknown physical constant (a launch angle, a drag coefficient) as a **trainable parameter** and
 discover it from a few noisy measurements. Both halves of this project rest on one PyTorch
 feature: `torch.autograd.grad`, which differentiates the network's *output* with respect to its
-*input* exactly, letting us put a derivative — i.e. a law of motion — directly inside the loss.
+*input* exactly, letting us put a derivative (i.e. a law of motion) directly inside the loss.
 
 ---
 
 ## 1. Why a PINN at all? (ideology)
 
-For an *ideal* projectile there's a clean formula, so a PINN looks like overkill — and in
+For an *ideal* projectile there's a clean formula, so a PINN looks like overkill and in
 Notebooks 1–2 it deliberately is. The point is to **validate the machinery on a problem we can
 check by hand** before turning off the safety rails. The payoff arrives in Notebook 3: once air
 drag is added, the equations become **coupled and nonlinear with no closed-form solution**, and
-in Notebooks 4–5 we use the same tool to **discover hidden physics from data** — the canonical
+in Notebooks 4–5 we use the same tool to **discover hidden physics from data**, the canonical
 real-world use of PINNs. Build trust on the known, then extend to the unknown.
 
 ---
